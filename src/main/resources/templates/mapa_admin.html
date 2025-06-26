@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Mapa de Sismos (Administrador)</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/estilos.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+    <style>
+        #map {
+            height: 90vh;
+            width: 100%;
+        }
+    </style>
+    
+</head>
+<body th:data-theme="${tema}">
+    <h2 style="text-align: center;">Sismos en México (Vista Administrador)</h2>
+
+    <div class="container text-center my-3">
+        <a href="/admin" class="btn btn-outline-secondary">← Volver al perfil</a>
+    </div>
+
+    <!-- Formulario de filtros -->
+    <form th:action="@{/admin/mapa}" method="get" class="container mb-4">
+        <div class="row justify-content-center g-3">
+            <div class="col-md-3">
+                <label for="fecha" class="form-label">Fecha</label>
+                <input type="date" id="fecha" name="fecha" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label for="hora" class="form-label">Hora</label>
+                <input type="time" id="hora" name="hora" step="1" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label for="magnitud" class="form-label">Magnitud mínima</label>
+                <input type="number" step="0.1" id="magnitud" name="magnitud" class="form-control" placeholder="Ej. 4.5" />
+            </div>
+            <div class="col-md-3">
+                <label for="profundidad" class="form-label">Profundidad máxima (km)</label>
+                <input type="number" step="0.1" id="profundidad" name="profundidad" class="form-control" placeholder="Ej. 70" />
+            </div>
+        </div>
+
+        <div class="row justify-content-center mt-3">
+            <div class="col-md-3 text-center">
+                <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Mapa -->
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script th:inline="javascript">
+        // Iconos personalizados
+        const iconoSismo = L.divIcon({
+            className: 'custom-div-icon',
+            html: '<div style="background-color:#E65100; width:16px; height:16px; border-radius:50%; border:2px solid white;"></div>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+
+        const iconoLocalidad = L.divIcon({
+            className: 'custom-div-icon',
+            html: '<div style="background-color:#1976D2; width:16px; height:16px; border-radius:50%; border:2px solid white;"></div>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+
+        const map = L.map('map').setView([23.6345, -102.5528], 5);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        const sismos = /*[[${sismos}]]*/ [];
+        const localidades = /*[[${localidades}]]*/ [];
+
+        // Agrupador de sismos
+        const clusterSismos = L.markerClusterGroup();
+        sismos.forEach(sismo => {
+            const marker = L.marker([sismo.latitud, sismo.longitud], { icon: iconoSismo });
+
+            marker.bindPopup(`
+                <b>Zona:</b> ${sismo.zona}<br/>
+                <b>Fecha:</b> ${sismo.fecha}<br/>
+                <b>Hora:</b> ${sismo.hora}<br/>
+                <b>Magnitud:</b> ${sismo.magnitud}<br/>
+                <b>Profundidad:</b> ${sismo.profundidad} km<br/>
+                <a href="/admin/sismos-crud/mapa/descargar-pdf/${sismo.id}" class="btn btn-primary btn-sm mt-2" target="_blank">
+                    📄 Descargar PDF
+                </a>
+            `);
+
+            clusterSismos.addLayer(marker);
+        });
+        map.addLayer(clusterSismos);
+
+        // Agrupador de localidades
+        const clusterLocalidades = L.markerClusterGroup();
+        localidades.forEach(localidad => {
+            if (localidad.latitud && localidad.longitud) {
+                const marker = L.marker([localidad.latitud, localidad.longitud], { icon: iconoLocalidad });
+
+                marker.bindPopup(`
+                    <b>${localidad.nombre}</b><br/>
+                    Estado: ${localidad.estado}<br/>
+                    Población total: ${localidad.pobTotal}<br/>
+                    Masculina: ${localidad.pobMasculina}<br/>
+                    Femenina: ${localidad.pobFemenina}
+                `);
+
+                clusterLocalidades.addLayer(marker);
+            }
+        });
+        map.addLayer(clusterLocalidades);
+    </script>
+</body>
+</html>

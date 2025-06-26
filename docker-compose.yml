@@ -1,0 +1,52 @@
+version: '3.8' # Puedes remover esta línea si lo deseas, ya no es obligatoria.
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: mysql_db
+    environment:
+      MYSQL_DATABASE: proyectofinal
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3307:3306"
+    networks:
+      - spring-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./my.cnf:/etc/mysql/conf.d/custom.cnf:ro   
+      - db-data:/var/lib/mysql # Volumen para persistencia de datos
+      # Nueva línea para montar tu script SQL:
+      - ./src/main/resources/proyectofinal.sql:/docker-entrypoint-initdb.d/init_schema.sql
+    # El nombre 'init_schema.sql' dentro del contenedor puede ser cualquier nombre que termine en .sql
+
+  app:
+    build: .
+    container_name: spring_app
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    restart: always
+    networks:
+      - spring-network
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/proyectofinal?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    command: >
+      sh -c "echo 'Esperando a MySQL...' &&
+             until mysqladmin ping -h db -uroot -proot --silent; do
+               sleep 2
+             done &&
+             java -jar app.jar"
+
+networks:
+  spring-network:
+
+volumes:
+  db-data:

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil de Administrador</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/estilos.css">
+    
+
+</head>
+<body th:data-theme="${tema}">
+
+    <div class="container text-end mt-3 me-3">
+        <form th:action="@{/logout}" method="post">
+            <button type="submit" class="btn btn-outline-danger">Cerrar sesión</button>
+        </form>
+    </div>
+
+
+    <div class="container mt-5">
+        <h1 class="text-center">Perfil de Administrador</h1>
+        <div class="card mx-auto mt-4" style="max-width: 500px;">
+            <div class="card-body">
+                <h2 class="card-title">Información Personal</h2>
+                
+                <div th:if="${usuario != null}">
+                    <p class="card-text"><strong>Nombre:</strong> [[${usuario.nombre}]]</p>
+                    <p class="card-text"><strong>Email:</strong> [[${usuario.email}]]</p>
+                    <p class="card-text"><strong>Rol:</strong>
+                        <span th:each="rol : ${usuario.roles}" th:text="${rol.nombre}"></span>
+                    </p>                    
+                </div>
+
+                <div th:if="${usuario == null}">
+                    <p class="text-danger">No se encontró la información del usuario.</p>
+                    <a href="/login" class="btn btn-primary">Volver al login</a>
+                </div>
+
+                <div class="text-center mt-4">
+                    <a href="/admin/dashboard" class="btn btn-warning">Operaciones CRUD</a>
+                    <a href="/admin/editar-perfil" class="btn btn-primary">Editar Perfil</a>
+                    <form th:action="@{/admin/cambiar-tema}" method="post" style="margin-top: 15px;">
+                        <input type="hidden" name="tema" th:value="${tema == 'claro' ? 'oscuro' : 'claro'}" />
+                        <button type="submit" class="btn btn-secondary">Cambiar Tema</button>
+                    </form>    
+                    <a href="/admin/mapa" class="btn btn-info mb-2">Ver Mapa de Sismos</a>
+                    <a href="/admin/simulador" class="btn btn-warning mt-3">Simular Sismo</a>                
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

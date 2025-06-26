@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Simulador de Sismos</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/estilos.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <style>
+        #map {
+            height: 80vh;
+            width: 100%;
+        }
+    </style>
+</head>
+<body th:data-theme="${tema}">
+
+    <div class="text-center mt-4">
+        <a sec:authorize="hasAuthority('ROLE_ADMIN')" 
+        th:href="@{/admin}" 
+        class="btn btn-primary">
+            Volver al panel de administrador
+        </a>
+
+        <a sec:authorize="hasAuthority('ROLE_USER')" 
+        th:href="@{/usuario}" 
+        class="btn btn-primary">
+            Volver a mi perfil
+        </a>
+    </div>
+
+    
+    <div class="container mt-4">
+        <h2 class="text-center">🌀 Simulador de Sismos</h2>
+        <form id="simuladorForm" class="row g-3 mt-3">
+            <div class="col-md-3">
+                <label for="latitud" class="form-label">Latitud</label>
+                <input type="number" step="0.0001" class="form-control" id="latitud" required>
+            </div>
+            <div class="col-md-3">
+                <label for="longitud" class="form-label">Longitud</label>
+                <input type="number" step="0.0001" class="form-control" id="longitud" required>
+            </div>
+            <div class="col-md-3">
+                <label for="magnitud" class="form-label">Magnitud</label>
+                <input type="number" step="0.1" class="form-control" id="magnitud" min="1.0" max="10.0" required>
+            </div>
+            <div class="col-md-3">
+                <label for="radio" class="form-label">Radio (km)</label>
+                <input type="number" step="1" class="form-control" id="radio" min="1" max="500" required>
+            </div>
+            <div class="col-md-12 text-center mt-3">
+                <button type="submit" class="btn btn-danger">Simular Sismo</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="map" class="mt-4"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script th:inline="javascript">
+        const localidades = /*[[${localidades}]]*/ [];
+
+        const map = L.map('map').setView([23.6345, -102.5528], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        const iconoLocalidad = L.divIcon({
+            className: 'custom-div-icon',
+            html: '<div style="background-color:#1976D2;width:16px;height:16px;border-radius:50%;border:2px solid white;"></div>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+
+        const clusterLocalidades = L.markerClusterGroup();
+        localidades.forEach(loc => {
+            if (loc.latitud && loc.longitud) {
+                const marker = L.marker([loc.latitud, loc.longitud], { icon: iconoLocalidad })
+                    .bindPopup(`<b>${loc.nombre}</b><br>Estado: ${loc.estado}<br>Población: ${loc.pobTotal}`);
+                clusterLocalidades.addLayer(marker);
+            }
+        });
+        map.addLayer(clusterLocalidades);
+
+        let circleSimulacion = null;
+        let epicentroMarker = null;
+
+        document.getElementById('simuladorForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const lat = parseFloat(document.getElementById('latitud').value);
+            const lon = parseFloat(document.getElementById('longitud').value);
+            const mag = parseFloat(document.getElementById('magnitud').value);
+            const radio = parseFloat(document.getElementById('radio').value);
+            const maxRadius = radio * 1000;
+
+            // Eliminar marcador y círculo anterior si existen
+            if (circleSimulacion) map.removeLayer(circleSimulacion);
+            if (epicentroMarker) map.removeLayer(epicentroMarker);
+
+            // Epicentro
+            epicentroMarker = L.marker([lat, lon], {
+                icon: L.divIcon({
+                    className: 'sismo-icon',
+                    html: '<div style="background-color:red;width:18px;height:18px;border-radius:50%;border:2px solid white;"></div>',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                })
+            }).addTo(map).bindPopup(`<b>Sismo simulado</b><br>Magnitud: ${mag}`).openPopup();
+
+            // Círculo animado
+            let currentRadius = 0;
+            circleSimulacion = L.circle([lat, lon], {
+                color: 'red',
+                fillColor: '#f03',
+                fillOpacity: 0.3,
+                radius: 0
+            }).addTo(map);
+
+            const animation = setInterval(() => {
+                currentRadius += 1000;
+                circleSimulacion.setRadius(currentRadius);
+                if (currentRadius >= maxRadius) clearInterval(animation);
+            }, 50);
+
+            // Mostrar localidades impactadas
+            localidades.forEach(loc => {
+                const distancia = map.distance([lat, lon], [loc.latitud, loc.longitud]);
+                if (distancia <= maxRadius) {
+                    L.circleMarker([loc.latitud, loc.longitud], {
+                        radius: 6,
+                        fillColor: 'orange',
+                        color: 'red',
+                        weight: 1,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    }).addTo(map).bindPopup(`<b>${loc.nombre}</b><br>Afectado por el sismo`);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
