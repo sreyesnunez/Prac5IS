@@ -61,3 +61,15 @@ http://localhost:8080/login
 
 ---
 
+## ✅ Pruebas automatizadas con Spring Boot
+
+Este proyecto incorpora pruebas automatizadas utilizando el framework de Spring Boot + JUnit 5 + Mockito, con el propósito de validar la lógica de los controladores y servicios.
+
+## ▶️ Cómo ejecutar todas las pruebas
+
+Asegúrate de tener Docker ejecutándose (ya que el proyecto depende de una base de datos MySQL contenedorizada). Luego, desde la raíz del proyecto, ejecuta en la terminal:
+
+``` bash
+mvn test
+```
+
